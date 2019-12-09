@@ -49,7 +49,9 @@ public class DataBaseConnection
             int id = resultSet.getInt("id");
             String aPlace = resultSet.getString("a_place");
             String bPlace = resultSet.getString("b_place");
-            Flight flight = new Flight(id, aPlace, bPlace);
+            int seats = resultSet.getInt("seats");
+            int free_seats = resultSet.getInt("free_seats");
+            Flight flight = new Flight(id, aPlace, bPlace, seats, free_seats);
 
             res.add(flight);
         }
