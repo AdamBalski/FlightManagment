@@ -6,7 +6,6 @@ import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.sql.SQLException;
 import java.util.ArrayList;
-import pl.atomos.v1.*;
 
 public class Main extends JFrame implements ActionListener
 {
@@ -14,12 +13,12 @@ public class Main extends JFrame implements ActionListener
 
     JTextField aPlaceTextField, bPlaceTextField, seatsTextField;
     JLabel aPlaceLabel, bPlaceLabel, seatsLabel;
-
-    String aPlaceBufor, bPlaceBufor;
-    int seatsBufor;
     int page;
+    boolean isFavorite;
     JLabel[] info;
-    JButton previous, next;
+    Flight[] flightsOnPage;
+    JButton[] flightFavoriteButtons;
+    JButton previous, next, favoriteButton;
 
     ArrayList<Flight> flights;
     DataBaseConnection dbc;
@@ -27,76 +26,8 @@ public class Main extends JFrame implements ActionListener
     public static void main(String[] args) throws SQLException
     {
         Main main = new Main();
-
-        main.refresh();
-
-        main.drawPage();
-
-        System.out.println(Atomos.longestSubsequence("fish", "fosh"));
-        //TODO it has to print '3' instead of printed '2' so it's something wrong with the longest subsequence algorithm
-    }
-
-    private void drawPage()
-    {
-        int iReal = 0;
-
-        for(int i = page * 8; iReal < 8 && i < flights.size(); i++)
-        {
-            if(satisfyingContraints(flights.get(i)))
-            {
-                createFlightModule(flights.get(i), iReal);
-                iReal++;
-            }
-        }
-
-        for(; iReal < 8; iReal++)
-        {
-            info[iReal].setText("");
-        }
-    }
-
-    private Main() throws SQLException
-    {
-        aPlaceBufor = "";
-        bPlaceBufor = "";
-        seatsBufor = 0;
-
-        flights = new ArrayList<>();
-        dbc = new DataBaseConnection();
-
-        aPlaceBufor = "";
-        bPlaceBufor = "";
-        seatsBufor = 0;
-
-        page = 0;
-        info = new JLabel[8];
-
-        makeGUI();
-    }
-
-    private void createFlightModule(Flight flight, int position)
-    {
-        info[position].setText(
-                "<html>" +
-                        "<h2>" +
-                                flight.aPlace +
-                                " - " +
-                                flight.bPlace +
-                        "</h2>" +
-
-                                "Free seats: " +
-                                flight.free_seats +
-
-                        "<br>" +
-                                "Flight's Id: " +
-                                flight.id +
-                "</html>"
-        );
-    }
-
-    private boolean satisfyingContraints(Flight flight)
-    {
-        return flight.free_seats >= seatsBufor;
+        main.makeGUI();
+        main.dbc.setFavorite(23, true);
     }
 
     private void makeGUI()
@@ -104,7 +35,7 @@ public class Main extends JFrame implements ActionListener
         setDefaultLookAndFeelDecorated(true);
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         setLayout(null);
-        setTitle("Flight searching");
+        setTitle("Flight search");
         setResizable(false);
         setBounds(70, 40,  1000, 700);
 
@@ -159,7 +90,14 @@ public class Main extends JFrame implements ActionListener
         next.setBounds(85, 8*70+50, 50, 50);
         this.add(next);
         next.addActionListener(this);
+        previous.setEnabled(false);
+        next.setEnabled(false);
 
+        icon = new ImageIcon("src/images/not_favorite_img.jpg");
+        favoriteButton = new JButton(icon);
+        favoriteButton.setBounds(565, 10, 50, 50);
+        this.add(favoriteButton);
+        favoriteButton.addActionListener(this);
 
         setVisible(true);
 
@@ -169,12 +107,25 @@ public class Main extends JFrame implements ActionListener
             add(info[i]);
             info[i].setBounds(30, 40 + ((i) * 70), 800, 70);
             info[i].setVisible(true);
+
+            flightFavoriteButtons[i] = new JButton();
+            add(flightFavoriteButtons[i]);
+            flightFavoriteButtons[i].setBounds(960, 80 + ((i) * 70), 20, 20);
+            flightFavoriteButtons[i].setVisible(false);
+            flightFavoriteButtons[i].addActionListener(this);
         }
     }
 
-    private void refresh() throws SQLException
+    private Main() throws SQLException
     {
-        flights = dbc.getRecords();
+        flights = new ArrayList<>();
+        dbc = new DataBaseConnection();
+
+        isFavorite = false;
+        page = 0;
+        info = new JLabel[8];
+        flightsOnPage = new Flight[8];
+        flightFavoriteButtons = new JButton[8];
     }
 
     @Override
@@ -184,47 +135,184 @@ public class Main extends JFrame implements ActionListener
 
         if(obj == searchButton)
         {
-            try
-            {
-                aPlaceBufor = aPlaceTextField.getText();
-                bPlaceBufor = bPlaceTextField.getText();
-
-                String str = seatsTextField.getText();
-                seatsBufor = str.equals("") ? 0 : Integer.parseInt(str);
-
-                refresh();
-
-
-                page = 0;
-                drawPage();
-            }
-            catch(NumberFormatException nfe)
-            {
-                System.out.println("You typed something wrong. Please repeat and write right data.");
-            }
-            catch(SQLException sqle)
-            {
-                System.out.println("Something is wrong with our database. Sorry try again later.");
-            }
+            search();
         }
         else if(obj == previous)
         {
-            if(page == 0)
-            {
-                System.out.println("You are on first page.");
-            }
-            else
-            {
-                page--;
-                drawPage();
-            }
+            previousPage();
         }
         else if(obj == next)
         {
-            // if(page == last_page)
+            nextPage();
+        }
+        else if(obj == favoriteButton)
+        {
+            setFavorite(!isFavorite);
+        }
+        else if(favoriteFlightButtonIndex(obj) != - 1)
+        {
+            setFlightReversedFavoriteByButton(obj);
+        }
+    }
 
-            page++;
+    private void search()
+    {
+        try
+        {
+            refresh(getFlightFromOutput());
+            page = 0;
             drawPage();
         }
+        catch(NumberFormatException nfe)
+        {
+            System.out.println("You typed something wrong. Please repeat and write right data.");
+        }
+        catch(SQLException sqle)
+        {
+            System.out.println("Something is wrong with our database. Sorry try again later.");
+        }
+    }
+
+    private Flight getFlightFromOutput()
+    {
+        try
+        {
+            String aPlace = aPlaceTextField.getText();
+            String bPlace = bPlaceTextField.getText();
+
+            String str = seatsTextField.getText();
+            int seats = str.equals("") ? 0 : Integer.parseInt(str);
+            return new Flight(Integer.MIN_VALUE, aPlace, bPlace, Integer.MIN_VALUE, seats, isFavorite);
+        }
+        catch(NumberFormatException nfe)
+        {
+            System.out.println("You typed something wrong. Please repeat and write right data.");
+        }
+
+        System.out.println("Something went wrong.");
+        return new Flight(-1, "", "", 0, 0, isFavorite);
+    }
+
+    private void nextPage()
+    {
+        page++;
+        drawPage();
+    }
+
+    private void previousPage()
+    {
+        page--;
+        drawPage();
+    }
+
+    private void setFlightReversedFavoriteByButton(Object obj)
+    {
+        int position = favoriteFlightButtonIndex(obj);
+        JButton button = flightFavoriteButtons[position];
+        Flight flight = flightsOnPage[position];
+
+        dbc.setFavorite(flight.getId(), !flight.isFavorite);
+        flight.isFavorite = !flight.isFavorite;
+
+        String path = flight.isFavorite ? "src/images/favorite_mini_img.jpg" :
+                "src/images/not_favorite_mini_img.jpg";
+        button.setIcon(new ImageIcon(path));
+
+        System.out.println(position);
+    }
+
+    private int favoriteFlightButtonIndex(Object obj)
+    {
+        if(!(obj instanceof JButton))
+            return -1;
+
+        JButton button = (JButton) obj;
+        for(int i = 0; i < 8; i++)
+            if(button == flightFavoriteButtons[i])
+                return i;
+
+        return -1;
+    }
+
+    private void setFavorite(boolean flag)
+    {
+        isFavorite = flag;
+
+        String path;
+        if(isFavorite)
+            path = "src/images/favorite_img.jpg";
+        else
+            path = "src/images/not_favorite_img.jpg";
+
+        favoriteButton.setIcon(new ImageIcon(path));
+    }
+
+    private boolean onLastPage()
+    {
+        return 8 * (page + 1) >= flights.size();
+    }
+
+    private void refresh() throws SQLException
+    {
+        flights = dbc.getRecords();
+    }
+
+    private void refresh(Flight filter) throws SQLException
+    {
+        flights = dbc.getRecords(filter);
+    }
+
+    private void drawPage()
+    {
+        int j = 0;
+        for(int i = page * 8; j < 8 && i < flights.size(); i++, j++)
+        {
+            createFlightModule(flights.get(i), j);
+        }
+
+        for(; j < 8; j++)
+        {
+            info[j].setText("");
+            flightsOnPage[j] = null;
+            flightFavoriteButtons[j].setVisible(false);
+        }
+
+        setSwitchingPagesAbility();
+    }
+
+    private void setSwitchingPagesAbility()
+    {
+        previous.setEnabled(page != 0);
+        next.setEnabled(!onLastPage());
+    }
+
+    private void createFlightModule(Flight flight, int position)
+    {
+        info[position].setText(
+                "<html>" +
+                        "<h2>" +
+                        flight.aPlace +
+                        " - " +
+                        flight.bPlace +
+                        "</h2>" +
+
+                        "Free seats: " +
+                        flight.free_seats +
+
+                        "<br>" +
+                        "Flight's Id: " +
+                        flight.getId() +
+                        "</html>"
+        );
+
+        flightsOnPage[position] = flight;
+
+        JButton favorite = flightFavoriteButtons[position];
+
+        String path = flight.isFavorite ? "src/images/favorite_mini_img.jpg" :
+                "src/images/not_favorite_mini_img.jpg";
+        favorite.setIcon(new ImageIcon(path));
+
+        favorite.setVisible(true);
     }
 }

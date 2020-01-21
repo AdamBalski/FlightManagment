@@ -2,26 +2,32 @@ package pl.atomos.v1;
 
 public class Atomos
 {
-    public static int longestSubsequence(String a, String b)
+    public static int longestCommonSubsequence(String a, String b)
     {
-        int[][] dp = new int[a.length()][b.length()];
+        int m = a.length();
+        int n = b.length();
+        int[][] dp = new int[m+1][n+1];
 
-        for(int i = 0; i < a.length(); i++)
+        for(int i = 0; i <= m; i++)
         {
-            for(int j = 0; j < b.length(); j++)
+            for(int j = 0; j <= n; j++)
             {
-                if(a.charAt(i) == b.charAt(j))
+                if(i == 0 || j == 0)
                 {
-                    dp[i][j] = j == 0 || i == 0 ? 0 : dp[i-1][j-1] + 1;
+                    dp[i][j] = 0;
+                }
+                else if(a.charAt(i - 1) == b.charAt(j - 1))
+                {
+                    dp[i][j] = 1 + dp[i-1][j-1];
                 }
                 else
                 {
-                    dp[i][j] = Math.max(j == 0 ? 0 : dp[i][j-1], i == 0 ? 0 : dp[i-1][j]);
+                    dp[i][j] = Math.max(dp[i - 1][j], dp[i][j - 1]);
                 }
             }
         }
 
-        return Atomos.max(dp);
+        return dp[m][n];
     }
 
     public static int max(int[][] a)
