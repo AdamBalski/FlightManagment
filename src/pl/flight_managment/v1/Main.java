@@ -11,8 +11,8 @@ public class Main extends JFrame implements ActionListener
 {
     JButton searchButton;
 
-    JTextField aPlaceTextField, bPlaceTextField, seatsTextField;
-    JLabel aPlaceLabel, bPlaceLabel, seatsLabel;
+    JTextField aPlaceTextField, bPlaceTextField, startDateTextField, endDateTextField, seatsTextField;
+    JLabel aPlaceLabel, bPlaceLabel, startDateLabel, endDateLabel, seatsLabel;
     int page;
     boolean isFavorite;
     JLabel[] info;
@@ -27,7 +27,7 @@ public class Main extends JFrame implements ActionListener
     {
         Main main = new Main();
         main.makeGUI();
-        main.dbc.setFavorite(23, true);
+        new Date("25:01:2020");
     }
 
     private void makeGUI()
@@ -49,34 +49,52 @@ public class Main extends JFrame implements ActionListener
 
         aPlaceLabel = new JLabel("Whence?:");
         bPlaceLabel = new JLabel("Whither?:");
+        startDateLabel = new JLabel("From(date)?:");
+        endDateLabel = new JLabel("To(date)?:");
         seatsLabel = new JLabel("How many seats?:");
         aPlaceLabel.setFont(font);
         bPlaceLabel.setFont(font);
+        startDateLabel.setFont(font);
+        endDateLabel.setFont(font);
         seatsLabel.setFont(font);
         aPlaceLabel.setBounds(10, 10, 75, 15);
         bPlaceLabel.setBounds(200, 10, 75, 15);
+        startDateLabel.setBounds(10, 30, 95, 15);
+        endDateLabel.setBounds(200, 30, 75, 15);
         seatsLabel.setBounds(380, 10, 130, 15);
         this.add(aPlaceLabel);
         this.add(bPlaceLabel);
+        this.add(startDateLabel);
+        this.add(endDateLabel);
         this.add(seatsLabel);
 
         font = new Font(Font.SANS_SERIF, Font.BOLD, 12);
 
         aPlaceTextField = new JTextField();
         bPlaceTextField = new JTextField();
+        startDateTextField = new JTextField();
+        endDateTextField = new JTextField();
         seatsTextField = new JTextField();
         aPlaceTextField.setFont(font);
         bPlaceTextField.setFont(font);
+        startDateTextField.setFont(font);
+        endDateTextField.setFont(font);
         seatsTextField.setFont(font);
         aPlaceTextField.setBounds(90, 10, 90, 15);
         bPlaceTextField.setBounds(280, 10, 90, 15);
+        startDateTextField.setBounds(110, 30, 70, 15);
+        endDateTextField.setBounds(280, 30, 90, 15);
         seatsTextField.setBounds(520, 10, 30, 15);
         this.add(aPlaceTextField);
         this.add(bPlaceTextField);
+        this.add(startDateTextField);
+        this.add(endDateTextField);
         this.add(seatsTextField);
 
         aPlaceLabel.setVisible(true);
         bPlaceLabel.setVisible(true);
+        startDateLabel.setVisible(true);
+        endDateLabel.setVisible(true);
         seatsLabel.setVisible(true);
         searchButton.setVisible(true);
 
@@ -159,7 +177,7 @@ public class Main extends JFrame implements ActionListener
     {
         try
         {
-            refresh(getFlightFromOutput());
+            refresh(getFlightFromOutput(), getDateRangeFromOutput());
             page = 0;
             drawPage();
         }
@@ -182,7 +200,7 @@ public class Main extends JFrame implements ActionListener
 
             String str = seatsTextField.getText();
             int seats = str.equals("") ? 0 : Integer.parseInt(str);
-            return new Flight(Integer.MIN_VALUE, aPlace, bPlace, Integer.MIN_VALUE, seats, isFavorite);
+            return new Flight(Integer.MIN_VALUE, aPlace, bPlace, new Date("0:0:0"), Integer.MIN_VALUE, seats, isFavorite);
         }
         catch(NumberFormatException nfe)
         {
@@ -190,7 +208,25 @@ public class Main extends JFrame implements ActionListener
         }
 
         System.out.println("Something went wrong.");
-        return new Flight(-1, "", "", 0, 0, isFavorite);
+        return new Flight(-1, "", "", new Date("0:0:0"),0, 0, isFavorite);
+    }
+
+    private DateRange getDateRangeFromOutput()
+    {
+        try
+        {
+            String start = aPlaceTextField.getText();
+            String end = bPlaceTextField.getText();
+
+            return new DateRange(start, end);
+        }
+        catch(NumberFormatException nfe)
+        {
+            System.out.println("You typed something wrong. Please repeat and write right data.");
+        }
+
+        System.out.println("Something went wrong.");
+        return new DateRange("0:0:0", "0:0:0");
     }
 
     private void nextPage()
@@ -257,9 +293,9 @@ public class Main extends JFrame implements ActionListener
         flights = dbc.getRecords();
     }
 
-    private void refresh(Flight filter) throws SQLException
+    private void refresh(Flight filter, DateRange dataRange) throws SQLException
     {
-        flights = dbc.getRecords(filter);
+        flights = dbc.getRecords(filter, dataRange);
     }
 
     private void drawPage()

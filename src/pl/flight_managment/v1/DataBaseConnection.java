@@ -18,35 +18,16 @@ public class DataBaseConnection
         statement = connection.createStatement();
     }
 
-    public boolean bookAFlight(int id) throws SQLException
-    {
-        ResultSet resultSet = statement.executeQuery("SELECT free_seats FROM Flights WHERE id = " + id);
-
-        resultSet.next();
-        int free_seats = resultSet.getInt("free_seats");
-
-        if(free_seats < 1)
-        {
-            return false;
-        }
-        else
-        {
-            free_seats -= 1;
-            statement.executeUpdate(" UPDATE `Flights`" +
-                                         " SET free_seats = " + free_seats +
-                                         " WHERE id = " + id);
-
-            return true;
-        }
-    }
-
-    public ArrayList<Flight> getRecords(Flight filter) throws SQLException
+    public ArrayList<Flight> getRecords(Flight filter, DateRange dateRange) throws SQLException
     {
         ArrayList<Flight> result = new ArrayList<>();
 
         for(Flight flight: getRecords())
         {
-            if(flight.match(filter))    result.add(flight);
+
+            if(flight.match(filter))// && flight.date.matches(dateRange))
+                if(flight.date.matches(dateRange))
+                result.add(flight);
         }
 
         return result;
@@ -63,10 +44,11 @@ public class DataBaseConnection
             int id = resultSet.getInt("id");
             String aPlace = resultSet.getString("a_place");
             String bPlace = resultSet.getString("b_place");
+            Date date = new Date(resultSet.getString("date"));
             int seats = resultSet.getInt("seats");
             int free_seats = resultSet.getInt("free_seats");
             boolean isFavorite = resultSet.getBoolean("is_favorite");
-            Flight flight = new Flight(id, aPlace, bPlace, seats, free_seats, isFavorite);
+            Flight flight = new Flight(id, aPlace, bPlace, date, seats, free_seats, isFavorite);
 
             res.add(flight);
         }
@@ -74,7 +56,7 @@ public class DataBaseConnection
         return res;
     }
 
-    public boolean setFavorite(int id, boolean flag)
+    public void setFavorite(int id, boolean flag)
     {
         try
         {
@@ -86,18 +68,18 @@ public class DataBaseConnection
                     statement.executeUpdate(" UPDATE `Flights`" +
                                                 " SET is_favorite = " + (flag ? "1" : "0") +
                                                 " WHERE id = " + id);
-                    return true;
+                    return;
                 }
             }
 
             System.out.println("We can't find a flight with that id.");
+            return;
         }
         catch(SQLException sqle)
         {
-            System.out.println("Something went wrong.");
+            System.out.println("Something went wrong with data base.");
         }
 
         System.out.println("Something went wrong.");
-        return false;
     }
 }
